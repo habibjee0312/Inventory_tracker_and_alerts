@@ -64,7 +64,7 @@ Recommended dev tooling:
 This project consumes a Django REST Framework backend (Inventory Tracker). Short summary and integration notes for frontend developers:
 
 - Tech stack: Django + Django REST Framework (DRF). The backend exposes JSON REST endpoints and uses JWT (SimpleJWT) for authentication.
-- Where to find it: Backend lives under the repository Backend/inventory_tracker (see its README for full instructions).
+- Where to find it: Backend lives under the repository Backend/inventory_tracker (see its README for full instructions) and is also hosted on GitHub: https://github.com/AbdulMueed1a/inventory_tracker.git
 - Run locally:
   - Create and activate a Python virtualenv
   - pip install -r requirements.txt
