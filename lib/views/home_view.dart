@@ -354,8 +354,9 @@ class ItemCard extends StatelessWidget {
                 children: [
                   Icon(Icons.attach_money, size: 16, color: Colors.grey),
                   SizedBox(width: 4),
+                  // Use a safe formatter that accepts numeric or string prices
                   Text(
-                    'Price: \${item.price.toStringAsFixed(2)}',
+                    'Price: ${_formatPrice(item.price)}',
                     style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -439,5 +440,26 @@ class ItemCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Safe price formatting: accepts num or numeric String and returns a currency string
+  String _formatPrice(dynamic price) {
+    try {
+      double value;
+      if (price == null) {
+        value = 0.0;
+      } else if (price is num) {
+        value = price.toDouble();
+      } else if (price is String) {
+        value = double.tryParse(price) ?? 0.0;
+      } else {
+        // fallback for unexpected types
+        value = 0.0;
+      }
+      // Use intl for consistent currency formatting with two decimals
+      return NumberFormat.currency(symbol: '\$', decimalDigits: 2).format(value);
+    } catch (_) {
+      return '\$0.00';
+    }
   }
 }
