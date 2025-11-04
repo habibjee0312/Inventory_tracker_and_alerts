@@ -290,10 +290,18 @@ class ItemCard extends StatelessWidget {
       statusColor = Colors.red;
       statusText = 'Expired';
       statusIcon = Icons.error;
-    } else if (item.isExpiringSoon) {
+    }else if (item.isExpiringSoon && item.isLowOnStock) {
+      statusColor = Colors.deepPurple;
+      statusText = 'Critical : Expiring Soon and Is low on Stock';
+      statusIcon = Icons.warning;
+    }else if (item.isExpiringSoon) {
       statusColor = Colors.orange;
       statusText = 'Expiring Soon';
       statusIcon = Icons.warning;
+    } else if (item.isLowOnStock) {
+      statusColor = Colors.redAccent;
+      statusText = 'Low Stock';
+      statusIcon = Icons.inventory_2;
     }
 
     return Card(
