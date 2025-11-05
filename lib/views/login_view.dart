@@ -20,8 +20,8 @@ class _LoginViewState extends State<LoginView> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isCheckingHealth = true;
-  bool _healthCheckPassed = false;
-  String? _healthWarning;
+  String? _healthError;
+  bool _showRetryButton = false;
 
   @override
   void initState() {
@@ -32,69 +32,73 @@ class _LoginViewState extends State<LoginView> {
   Future<void> _performHealthCheck() async {
     setState(() {
       _isCheckingHealth = true;
-      _healthWarning = null;
+      _healthError = null;
+      _showRetryButton = false;
     });
 
     try {
-      final url = '${ApiService.baseUrl}/health/';
-      final uri = Uri.parse(url);
-
+      // Replace with your actual API base URL
+      const baseUrl = 'http://127.0.0.1:8000/api'; // e.g., 'https://api.example.com'
       final response = await http
           .get(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
+            Uri.parse('$baseUrl/health'),
+            headers: {'Content-Type': 'application/json'},
           )
           .timeout(
-            const Duration(seconds: 5),
+            const Duration(seconds: 10),
             onTimeout: () {
-              throw Exception('timeout');
+              throw Exception('Connection timeout');
             },
           );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['status'] == 'ok') {
+        if (data['status'] == 'ok' && data['db'] == true) {
+          // Health check passed
           if (mounted) {
             setState(() {
               _isCheckingHealth = false;
-              _healthCheckPassed = true;
-              _healthWarning = null;
+              _healthError = null;
+              _showRetryButton = false;
             });
           }
         } else {
+          // Server responded but health check failed
           if (mounted) {
             setState(() {
               _isCheckingHealth = false;
-              _healthCheckPassed = false;
-              _healthWarning =
-                  'Server health check failed. You may experience issues.';
+              _healthError = 'Database connection failed. Service unavailable.';
+              _showRetryButton = true;
             });
           }
         }
       } else {
+        // Server error
         if (mounted) {
           setState(() {
             _isCheckingHealth = false;
-            _healthCheckPassed = false;
-            _healthWarning = 'Server returned error (${response.statusCode}).';
+            _healthError =
+                'Server error (${response.statusCode}). Please try again later.';
+            _showRetryButton = true;
           });
         }
       }
     } catch (e) {
-      // Don't block login if health check fails - just show warning
-      String warningMessage = 'Unable to verify server connection.';
+      // Connection error
+      String errorMessage = 'Cannot connect to server. ';
       if (e.toString().contains('timeout')) {
-        warningMessage += ' Connection timeout.';
+        errorMessage += 'Connection timeout.';
+      } else if (e.toString().contains('SocketException')) {
+        errorMessage += 'No internet connection.';
+      } else {
+        errorMessage += 'Please check your network.';
       }
 
       if (mounted) {
         setState(() {
           _isCheckingHealth = false;
-          _healthCheckPassed = false;
-          _healthWarning = warningMessage;
+          _healthError = errorMessage;
+          _showRetryButton = true;
         });
       }
     }
@@ -102,6 +106,124 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    // Loading state during health check
+    if (_isCheckingHealth) {
+      return Scaffold(
+        backgroundColor: primaryColor.withOpacity(0.06),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: primaryColor, strokeWidth: 3),
+              const SizedBox(height: 24),
+              Text(
+                'Checking server connection...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: primaryColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Error state with retry option
+    if (_healthError != null && _showRetryButton) {
+      return Scaffold(
+        backgroundColor: primaryColor.withOpacity(0.06),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.cloud_off,
+                      size: 80,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    'Connection Error',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      _healthError!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.red.shade700,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _performHealthCheck,
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      label: const Text(
+                        'Retry Connection',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: () {
+                      // Optionally allow users to continue anyway (remove if not desired)
+                      setState(() {
+                        _healthError = null;
+                        _showRetryButton = false;
+                      });
+                    },
+                    icon: Icon(Icons.warning_amber, color: primaryColor),
+                    label: Text(
+                      'Continue Anyway',
+                      style: TextStyle(color: primaryColor, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Normal login screen (health check passed)
     return Scaffold(
       backgroundColor: primaryColor.withOpacity(0.06),
       body: SafeArea(
@@ -132,122 +254,6 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   const SizedBox(height: 48),
-
-                  // Health check status indicator
-                  if (_isCheckingHealth)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Checking server status...',
-                              style: TextStyle(
-                                color: Colors.blue.shade900,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Health check warning (non-blocking)
-                  if (!_isCheckingHealth && _healthWarning != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.warning_amber,
-                            color: Colors.orange.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _healthWarning!,
-                                  style: TextStyle(
-                                    color: Colors.orange.shade900,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                GestureDetector(
-                                  onTap: _performHealthCheck,
-                                  child: Text(
-                                    'Retry',
-                                    style: TextStyle(
-                                      color: primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Health check success indicator
-                  if (_healthCheckPassed && !_isCheckingHealth)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Colors.green.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Server connected successfully',
-                              style: TextStyle(
-                                color: Colors.green.shade900,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
                   TextFormField(
                     controller: _usernameController,
                     decoration: InputDecoration(
