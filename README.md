@@ -80,6 +80,11 @@ This project consumes a Django REST Framework backend (Inventory Tracker). Short
     - POST /api/items/        -> create item (auth)
     - GET  /api/items/<id>/   -> retrieve item
     - PUT/PATCH/DELETE /api/items/<id>/ -> update / delete (auth)
+   <img width="1920" height="1080" alt="Screenshot 2025-11-05 184456" src="https://github.com/user-attachments/assets/d4aaca23-1bba-493c-a36d-0c91ace1fc54" />
+
+   <img width="1920" height="1080" alt="Screenshot 2025-11-05 184513" src="https://github.com/user-attachments/assets/368c7a8f-411b-4c93-8a63-38272bbce2d5" />
+
+      
 - Backend notes for Flutter integration:
   - Signup endpoint returns `access` and `refresh` tokens — the app should store and use these.
   - For Android emulator use base URL http://10.0.2.2:8000; iOS simulator use http://127.0.0.1:8000; physical device use your machine LAN IP and runserver on 0.0.0.0.
@@ -97,6 +102,10 @@ This project consumes a Django REST Framework backend (Inventory Tracker). Short
   - If refresh succeeds, update stored tokens and retry the failed request.
   - If refresh fails, clear local auth state and redirect to login.
 - Keep token refresh logic centralized in ApiService or an interceptor (Dio recommended for interceptors).
+  
+  <img width="931" height="1053" alt="Screenshot 2025-11-05 003012" src="https://github.com/user-attachments/assets/beec3f68-d81a-4ec3-9247-35ecc2bdc2f4" />
+   <img width="931" height="1053" alt="Screenshot 2025-11-05 182201" src="https://github.com/user-attachments/assets/474b3597-7bf7-4e8e-8886-21b755621fc3" />
+
 
 ## Local development notes (emulator/device differences)
 - Android emulator: use `http://10.0.2.2:8000` for a backend running on your development machine.
@@ -113,6 +122,8 @@ CORS:
   - Expired items
   - Low stock alerts
 - Initialize `NotificationService` on app startup and request platform permissions as needed (Android/iOS differences).
+  
+   <img width="1920" height="1080" alt="Screenshot 2025-11-05 184523" src="https://github.com/user-attachments/assets/4d05e42e-f5f1-4674-9005-045923d65d9a" />
 
 ## Error handling & UX
 - ViewModels surface a `error` String for UI to display friendly messages.
